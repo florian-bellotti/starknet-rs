@@ -40,8 +40,6 @@ pub use types::Types;
 mod value;
 pub use value::{ArrayValue, ObjectValue, Value, ValueKind};
 
-use super::ByteArray;
-
 /// Cairo short string encoding of `StarkNet Message`.
 const STARKNET_MESSAGE_PREFIX: Felt = Felt::from_raw([
     257012186512350467,
@@ -54,13 +52,13 @@ const STARKNET_MESSAGE_PREFIX: Felt = Felt::from_raw([
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypedData {
     /// Type definitions for the domain separator type and user-defined custom types.
-    types: Types,
+    pub types: Types,
     /// Domain separator.
-    domain: Domain,
+    pub domain: Domain,
     /// Reference to the primary/entrypoint type that the `message` field represents.
-    primary_type: InlineTypeReference,
+    pub primary_type: InlineTypeReference,
     /// The main message data to be signed, structured as per `primary_type`'s definition.
-    message: Value,
+    pub message: Value,
 }
 
 impl TypedData {
@@ -193,7 +191,9 @@ impl TypedData {
             // both types the same. We deviate from the spec here to be compatible:
             //
             // https://github.com/starknet-io/starknet.js/issues/1039
-            CommonTypeReference::Felt | CommonTypeReference::ShortString => match value {
+            CommonTypeReference::Felt
+            | CommonTypeReference::String
+            | CommonTypeReference::ShortString => match value {
                 Value::String(str_value) => {
                     // This is to reimplement the `starknet.js` bug
                     let decoded_as_raw = match str_value.strip_prefix("0x") {
@@ -245,42 +245,42 @@ impl TypedData {
                     });
                 }
             },
-            CommonTypeReference::String => {
-                let str_value = match value {
-                    Value::String(str_value) => str_value,
-                    Value::UnsignedInteger(_)
-                    | Value::SignedInteger(_)
-                    | Value::Boolean(_)
-                    | Value::Object(_)
-                    | Value::Array(_) => {
-                        return Err(TypedDataError::UnexpectedValueType {
-                            expected: &[ValueKind::String],
-                            actual: value.kind(),
-                        });
-                    }
-                };
-
-                match self.revision() {
-                    Revision::V0 => {
-                        // In revision 0 `string` is treated as short string.
-
-                        cairo_short_string_to_felt(str_value)
-                            .map_err(|_| TypedDataError::InvalidShortString(str_value.to_owned()))?
-                    }
-                    Revision::V1 => {
-                        // In revision 1 `string` is treated as `ByteArray`.
-
-                        let mut hasher = H::default();
-
-                        // `ByteArray` encoding never fails
-                        ByteArray::from(str_value.as_str())
-                            .encode(&mut hasher)
-                            .unwrap();
-
-                        hasher.finalize()
-                    }
-                }
-            }
+            // CommonTypeReference::String => {
+            //     let str_value = match value {
+            //         Value::String(str_value) => str_value,
+            //         Value::UnsignedInteger(_)
+            //         | Value::SignedInteger(_)
+            //         | Value::Boolean(_)
+            //         | Value::Object(_)
+            //         | Value::Array(_) => {
+            //             return Err(TypedDataError::UnexpectedValueType {
+            //                 expected: &[ValueKind::String],
+            //                 actual: value.kind(),
+            //             });
+            //         }
+            //     };
+            //
+            //     match self.revision() {
+            //         Revision::V0 => {
+            //             // In revision 0 `string` is treated as short string.
+            //
+            //             cairo_short_string_to_felt(str_value)
+            //                 .map_err(|_| TypedDataError::InvalidShortString(str_value.to_owned()))?
+            //         }
+            //         Revision::V1 => {
+            //             // In revision 1 `string` is treated as `ByteArray`.
+            //
+            //             let mut hasher = H::default();
+            //
+            //             // `ByteArray` encoding never fails
+            //             ByteArray::from(str_value.as_str())
+            //                 .encode(&mut hasher)
+            //                 .unwrap();
+            //
+            //             hasher.finalize()
+            //         }
+            //     }
+            // }
             CommonTypeReference::Selector => {
                 let str_value = match value {
                     Value::String(str_value) => str_value,
@@ -380,27 +380,6 @@ impl TypedData {
 
                 Felt::from_str(str_value)
                     .map_err(|_| TypedDataError::InvalidNumber(str_value.to_owned()))?
-            }
-            CommonTypeReference::U256 => {
-                let obj_value = match value {
-                    Value::Object(obj_value) => obj_value,
-                    Value::String(_)
-                    | Value::UnsignedInteger(_)
-                    | Value::SignedInteger(_)
-                    | Value::Boolean(_)
-                    | Value::Array(_) => {
-                        return Err(TypedDataError::UnexpectedValueType {
-                            expected: &[ValueKind::Object],
-                            actual: value.kind(),
-                        });
-                    }
-                };
-
-                self.encode_composite::<H, _>(
-                    PresetType::U256.type_hash(self.revision()),
-                    &PresetType::U256,
-                    obj_value,
-                )?
             }
             CommonTypeReference::TokenAmount => {
                 let obj_value = match value {

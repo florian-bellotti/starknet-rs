@@ -290,21 +290,25 @@ impl CompositeType for StructDefinition {
 impl CompositeType for PresetType {
     fn field_iter(&self) -> impl Iterator<Item = (&str, &FullTypeReference)> {
         match self {
-            Self::U256 => [
+            _ => [
                 ("low", &FullTypeReference::U128),
                 ("high", &FullTypeReference::U128),
             ]
-            .into_iter(),
-            Self::TokenAmount => [
-                ("token_address", &FullTypeReference::ContractAddress),
-                ("amount", &FullTypeReference::U256),
-            ]
-            .into_iter(),
-            Self::NftId => [
-                ("collection_address", &FullTypeReference::ContractAddress),
-                ("token_id", &FullTypeReference::U256),
-            ]
-            .into_iter(),
+            .into_iter(), // Self::U256 => [
+                          //     ("low", &FullTypeReference::U128),
+                          //     ("high", &FullTypeReference::U128),
+                          // ]
+                          // .into_iter(),
+                          // Self::TokenAmount => [
+                          //     ("token_address", &FullTypeReference::ContractAddress),
+                          //     ("amount", &FullTypeReference::U256),
+                          // ]
+                          // .into_iter(),
+                          // Self::NftId => [
+                          //     ("collection_address", &FullTypeReference::ContractAddress),
+                          //     ("token_id", &FullTypeReference::U256),
+                          // ]
+                          // .into_iter(),
         }
     }
 

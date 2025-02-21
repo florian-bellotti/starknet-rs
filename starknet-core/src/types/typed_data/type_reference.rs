@@ -35,7 +35,7 @@ pub enum FullTypeReference {
     /// Reference to the basic type `timestamp`.
     Timestamp,
     /// Reference to the preset type `u256`.
-    U256,
+    // U256,
     /// Reference to the preset type `TokenAmount`.
     TokenAmount,
     /// Reference to the preset type `NftId`.
@@ -71,7 +71,7 @@ pub enum InlineTypeReference {
     /// Reference to the basic type `timestamp`.
     Timestamp,
     /// Reference to the preset type `u256`.
-    U256,
+    // U256,
     /// Reference to the preset type `TokenAmount`.
     TokenAmount,
     /// Reference to the preset type `NftId`.
@@ -115,7 +115,7 @@ pub enum ElementTypeReference {
     /// Reference to the basic type `timestamp`.
     Timestamp,
     /// Reference to the preset type `u256`.
-    U256,
+    // U256,
     /// Reference to the preset type `TokenAmount`.
     TokenAmount,
     /// Reference to the preset type `NftId`.
@@ -164,7 +164,7 @@ pub(crate) enum CommonTypeReference<'a> {
     ContractAddress,
     ClassHash,
     Timestamp,
-    U256,
+    // U256,
     TokenAmount,
     NftId,
     ShortString,
@@ -186,7 +186,7 @@ impl FullTypeReference {
             ("ContractAddress", None) => Self::ContractAddress,
             ("ClassHash", None) => Self::ClassHash,
             ("timestamp", None) => Self::Timestamp,
-            ("u256", None) => Self::U256,
+            // ("u256", None) => Self::U256,
             ("TokenAmount", None) => Self::TokenAmount,
             ("NftId", None) => Self::NftId,
             ("shortstring", None) => Self::ShortString,
@@ -220,7 +220,7 @@ impl TypeReference for FullTypeReference {
             Self::ContractAddress => CommonTypeReference::ContractAddress,
             Self::ClassHash => CommonTypeReference::ClassHash,
             Self::Timestamp => CommonTypeReference::Timestamp,
-            Self::U256 => CommonTypeReference::U256,
+            // Self::U256 => CommonTypeReference::U256,
             Self::TokenAmount => CommonTypeReference::TokenAmount,
             Self::NftId => CommonTypeReference::NftId,
             Self::ShortString => CommonTypeReference::ShortString,
@@ -241,7 +241,7 @@ impl TypeReference for FullTypeReference {
             Self::ContractAddress => "ContractAddress".to_owned(),
             Self::ClassHash => "ClassHash".to_owned(),
             Self::Timestamp => "timestamp".to_owned(),
-            Self::U256 => "u256".to_owned(),
+            // Self::U256 => "u256".to_owned(),
             Self::TokenAmount => "TokenAmount".to_owned(),
             Self::NftId => "NftId".to_owned(),
             Self::ShortString => "shortstring".to_owned(),
@@ -271,7 +271,7 @@ impl TypeReference for InlineTypeReference {
             Self::ContractAddress => CommonTypeReference::ContractAddress,
             Self::ClassHash => CommonTypeReference::ClassHash,
             Self::Timestamp => CommonTypeReference::Timestamp,
-            Self::U256 => CommonTypeReference::U256,
+            // Self::U256 => CommonTypeReference::U256,
             Self::TokenAmount => CommonTypeReference::TokenAmount,
             Self::NftId => CommonTypeReference::NftId,
             Self::ShortString => CommonTypeReference::ShortString,
@@ -291,7 +291,7 @@ impl TypeReference for InlineTypeReference {
             Self::ContractAddress => "ContractAddress".to_owned(),
             Self::ClassHash => "ClassHash".to_owned(),
             Self::Timestamp => "timestamp".to_owned(),
-            Self::U256 => "u256".to_owned(),
+            // Self::U256 => "u256".to_owned(),
             Self::TokenAmount => "TokenAmount".to_owned(),
             Self::NftId => "NftId".to_owned(),
             Self::ShortString => "shortstring".to_owned(),
@@ -320,7 +320,7 @@ impl TypeReference for ElementTypeReference {
             Self::ContractAddress => CommonTypeReference::ContractAddress,
             Self::ClassHash => CommonTypeReference::ClassHash,
             Self::Timestamp => CommonTypeReference::Timestamp,
-            Self::U256 => CommonTypeReference::U256,
+            // Self::U256 => CommonTypeReference::U256,
             Self::TokenAmount => CommonTypeReference::TokenAmount,
             Self::NftId => CommonTypeReference::NftId,
             Self::ShortString => CommonTypeReference::ShortString,
@@ -339,7 +339,7 @@ impl TypeReference for ElementTypeReference {
             Self::ContractAddress => "ContractAddress".to_owned(),
             Self::ClassHash => "ClassHash".to_owned(),
             Self::Timestamp => "timestamp".to_owned(),
-            Self::U256 => "u256".to_owned(),
+            // Self::U256 => "u256".to_owned(),
             Self::TokenAmount => "TokenAmount".to_owned(),
             Self::NftId => "NftId".to_owned(),
             Self::ShortString => "shortstring".to_owned(),
@@ -370,7 +370,7 @@ impl FromStr for InlineTypeReference {
             "ContractAddress" => Self::ContractAddress,
             "ClassHash" => Self::ClassHash,
             "timestamp" => Self::Timestamp,
-            "u256" => Self::U256,
+            // "u256" => Self::U256,
             "TokenAmount" => Self::TokenAmount,
             "NftId" => Self::NftId,
             "shortstring" => Self::ShortString,
@@ -400,7 +400,7 @@ impl FromStr for ElementTypeReference {
             "ContractAddress" => Self::ContractAddress,
             "ClassHash" => Self::ClassHash,
             "timestamp" => Self::Timestamp,
-            "u256" => Self::U256,
+            // "u256" => Self::U256,
             "TokenAmount" => Self::TokenAmount,
             "NftId" => Self::NftId,
             "shortstring" => Self::ShortString,

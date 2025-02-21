@@ -114,12 +114,12 @@ impl Types {
                 // here to be compatible.
             }
             // Preset types
-            CommonTypeReference::U256 => {
-                signatures.insert(
-                    PresetType::U256.name(),
-                    SignatureGenerator::PresetType(&PresetType::U256),
-                );
-            }
+            // CommonTypeReference::U256 => {
+            //     signatures.insert(
+            //         PresetType::U256.name(),
+            //         SignatureGenerator::PresetType(&PresetType::U256),
+            //     );
+            // }
             CommonTypeReference::TokenAmount => {
                 signatures.insert(
                     PresetType::TokenAmount.name(),
