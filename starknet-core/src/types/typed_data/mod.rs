@@ -611,6 +611,31 @@ impl<'de> Deserialize<'de> for TypedData {
             .map_err(|err| serde::de::Error::custom(format!("{}", err)))
     }
 }
+//
+// impl Serialize for TypedData {
+//     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+//     where
+//         S: serde::Serializer,
+//     {
+//         #[derive(Serialize)]
+//         struct Raw<'a> {
+//             types: &'a Types,
+//             domain: &'a Domain,
+//             #[serde(rename = "primaryType")]
+//             primary_type: &'a InlineTypeReference,
+//             message: &'a Value,
+//         }
+//
+//         let raw = Raw {
+//             types: &self.types,
+//             domain: &self.domain,
+//             primary_type: &self.primary_type,
+//             message: &self.message,
+//         };
+//
+//         raw.serialize(serializer)
+//     }
+// }
 
 #[cfg(test)]
 mod tests {

@@ -1,18 +1,17 @@
 use alloc::{borrow::ToOwned, collections::BTreeMap, string::*};
 
 use indexmap::IndexMap;
-use serde::Deserialize;
-
-use crate::{
-    types::{typed_data::CommonTypeReference, Felt},
-    utils::starknet_keccak,
-};
+use serde::{Deserialize, Serialize};
 
 use super::{
     error::TypedDataError,
     revision::Revision,
     type_definition::{PresetType, TypeDefinition},
-    TypeReference,
+    ElementTypeReference, FieldDefinition, FullTypeReference, StructDefinition, TypeReference,
+};
+use crate::{
+    types::{typed_data::CommonTypeReference, Felt},
+    utils::starknet_keccak,
 };
 
 #[cfg(feature = "std")]
@@ -39,6 +38,84 @@ enum SignatureGenerator<'a> {
 }
 
 impl Types {
+    /// Initializes OUTSIDE_EXECUTION_TYPED_DATA_V1
+    pub fn execute_from_outside_v1() -> Self {
+        let mut user_defined_types: IndexMap<String, TypeDefinition, RandomState> = IndexMap::new();
+        user_defined_types.insert(
+            "OutsideExecution".to_string(),
+            TypeDefinition::Struct(StructDefinition {
+                fields: vec![
+                    FieldDefinition::new("caller", FullTypeReference::Felt),
+                    FieldDefinition::new("nonce", FullTypeReference::Felt),
+                    FieldDefinition::new("execute_after", FullTypeReference::Felt),
+                    FieldDefinition::new("execute_before", FullTypeReference::Felt),
+                    FieldDefinition::new("calls_len", FullTypeReference::Felt),
+                    FieldDefinition::new(
+                        "calls",
+                        FullTypeReference::Array(ElementTypeReference::Custom(
+                            "OutsideCall".to_string(),
+                        )),
+                    ),
+                ],
+            }),
+        );
+        user_defined_types.insert(
+            "OutsideCall".to_string(),
+            TypeDefinition::Struct(StructDefinition {
+                fields: vec![
+                    FieldDefinition::new("to", FullTypeReference::Felt),
+                    FieldDefinition::new("selector", FullTypeReference::Felt),
+                    FieldDefinition::new("calldata_len", FullTypeReference::Felt),
+                    FieldDefinition::new(
+                        "calldata",
+                        FullTypeReference::Array(ElementTypeReference::Felt),
+                    ),
+                ],
+            }),
+        );
+        Self {
+            revision: Revision::V0,
+            user_defined_types,
+        }
+    }
+
+    /// Initializes OUTSIDE_EXECUTION_TYPED_DATA_V2
+    pub fn execute_from_outside_v2() -> Self {
+        let mut user_defined_types: IndexMap<String, TypeDefinition, RandomState> = IndexMap::new();
+        user_defined_types.insert(
+            "OutsideExecution".to_string(),
+            TypeDefinition::Struct(StructDefinition {
+                fields: vec![
+                    FieldDefinition::new("Caller", FullTypeReference::ContractAddress),
+                    FieldDefinition::new("Nonce", FullTypeReference::Felt),
+                    FieldDefinition::new("Execute After", FullTypeReference::U128),
+                    FieldDefinition::new("Execute Before", FullTypeReference::U128),
+                    FieldDefinition::new(
+                        "Calls",
+                        FullTypeReference::Array(ElementTypeReference::Custom("Call".to_string())),
+                    ),
+                ],
+            }),
+        );
+        user_defined_types.insert(
+            "Call".to_string(),
+            TypeDefinition::Struct(StructDefinition {
+                fields: vec![
+                    FieldDefinition::new("To", FullTypeReference::ContractAddress),
+                    FieldDefinition::new("Selector", FullTypeReference::Selector),
+                    FieldDefinition::new(
+                        "Calldata",
+                        FullTypeReference::Array(ElementTypeReference::Felt),
+                    ),
+                ],
+            }),
+        );
+        Self {
+            revision: Revision::V1,
+            user_defined_types,
+        }
+    }
+
     /// Gets the revision implied from the definition of the domain type.
     ///
     /// Returns [`Revision::V0`] if and only if only `StarkNetDomain` is defined.
@@ -296,9 +373,62 @@ impl<'de> Deserialize<'de> for Types {
     }
 }
 
+impl Serialize for Types {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let (name, types) = match self.revision {
+            Revision::V0 => (
+                DOMAIN_TYPE_NAME_V0,
+                TypeDefinition::Struct(StructDefinition {
+                    fields: vec![
+                        FieldDefinition::new("name", FullTypeReference::Felt),
+                        FieldDefinition::new("version", FullTypeReference::Felt),
+                        FieldDefinition::new("chainId", FullTypeReference::Felt),
+                    ],
+                }),
+            ),
+            Revision::V1 => (
+                DOMAIN_TYPE_NAME_V1,
+                TypeDefinition::Struct(StructDefinition {
+                    fields: vec![
+                        FieldDefinition::new("name", FullTypeReference::ShortString),
+                        FieldDefinition::new("version", FullTypeReference::ShortString),
+                        FieldDefinition::new("chainId", FullTypeReference::ShortString),
+                        FieldDefinition::new("revision", FullTypeReference::ShortString),
+                    ],
+                }),
+            ),
+        };
+        let mut raw = IndexMap::new();
+        raw.insert(name.to_owned(), types);
+        raw.extend(self.user_defined_types.clone());
+        raw.serialize(serializer)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::Value;
+
+    const VALID_V0_DATA: &str = r###"{
+  "StarkNetDomain": [
+    { "name": "name", "type": "felt" },
+    { "name": "version", "type": "felt" },
+    { "name": "chainId", "type": "felt" }
+  ],
+  "Example Message": [
+    { "name": "Name", "type": "string" },
+    { "name": "Some Array", "type": "u128*" },
+    { "name": "Some Object", "type": "My Object" }
+  ],
+  "My Object": [
+    { "name": "Some Selector", "type": "selector" },
+    { "name": "Some Contract Address", "type": "ContractAddress" }
+  ]
+}"###;
 
     const VALID_V1_DATA: &str = r###"{
   "StarknetDomain": [
@@ -318,37 +448,144 @@ mod tests {
   ]
 }"###;
 
-    #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    fn test_revision_0_deser() {
-        let raw = r###"{
+    #[cfg(test)]
+    mod execute_from_outside_v1 {
+        use super::*;
+        #[test]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+        fn should_init_types_for_execute_from_outside_v1() {
+            // Given
+            let expected: &str = r###"{
   "StarkNetDomain": [
     { "name": "name", "type": "felt" },
     { "name": "version", "type": "felt" },
     { "name": "chainId", "type": "felt" }
   ],
-  "Example Message": [
-    { "name": "Name", "type": "string" },
-    { "name": "Some Array", "type": "u128*" },
-    { "name": "Some Object", "type": "My Object" }
+  "OutsideExecution": [
+    { "name": "caller", "type": "felt" },
+    { "name": "nonce", "type": "felt" },
+    { "name": "execute_after", "type": "felt" },
+    { "name": "execute_before", "type": "felt" },
+    { "name": "calls_len", "type": "felt" },
+    { "name": "calls", "type": "OutsideCall*" }
   ],
-  "My Object": [
-    { "name": "Some Selector", "type": "selector" },
-    { "name": "Some Contract Address", "type": "ContractAddress" }
+  "OutsideCall": [
+    { "name": "to", "type": "felt" },
+    { "name": "selector", "type": "felt" },
+    { "name": "calldata_len", "type": "felt" },
+    { "name": "calldata", "type": "felt*" }
+  ]
+}"###;
+            // When
+            let result = Types::execute_from_outside_v1();
+
+            // Then
+            let types = serde_json::to_string(&result).unwrap();
+            println!("{}", types);
+            let raw_json: Value = serde_json::from_str(expected).unwrap();
+            let types_json: Value = serde_json::from_str(&types).unwrap();
+            assert_eq!(types_json, raw_json);
+        }
+    }
+
+    #[cfg(test)]
+    mod execute_from_outside_v2 {
+        use super::*;
+        #[test]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+        fn should_init_types_for_execute_from_outside_v2() {
+            // Given
+            let expected: &str = r###"{
+  "StarknetDomain": [
+      { "name": "name", "type": "shortstring" }, 
+      { "name": "version", "type": "shortstring" },
+      { "name": "chainId", "type": "shortstring" },
+      { "name": "revision", "type": "shortstring" }
+  ],
+  "OutsideExecution": [
+      { "name": "Caller", "type": "ContractAddress" },
+      { "name": "Nonce", "type": "felt" },
+      { "name": "Execute After", "type": "u128" },
+      { "name": "Execute Before", "type": "u128" },
+      { "name": "Calls", "type": "Call*" }
+  ],
+  "Call": [
+    { "name": "To", "type": "ContractAddress" },
+    { "name": "Selector", "type": "selector" },
+    { "name": "Calldata", "type": "felt*" }
   ]
 }"###;
 
-        let types = serde_json::from_str::<Types>(raw).unwrap();
-        assert_eq!(types.revision, Revision::V0);
-        assert_eq!(types.user_defined_types.len(), 2);
+            // When
+            let result = Types::execute_from_outside_v2();
+
+            // Then
+            let types = serde_json::to_string(&result).unwrap();
+            let raw_json: Value = serde_json::from_str(expected).unwrap();
+            let types_json: Value = serde_json::from_str(&types).unwrap();
+            assert_eq!(types_json, raw_json);
+        }
     }
 
-    #[test]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    fn test_revision_1_deser() {
-        let types = serde_json::from_str::<Types>(VALID_V1_DATA).unwrap();
-        assert_eq!(types.revision, Revision::V1);
-        assert_eq!(types.user_defined_types.len(), 2);
+    #[cfg(test)]
+    mod deserialize {
+        use super::*;
+        #[test]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+        fn should_init_types_when_revision_v0() {
+            // When
+            let types = serde_json::from_str::<Types>(VALID_V0_DATA).unwrap();
+
+            // Then
+            assert_eq!(types.revision, Revision::V0);
+            assert_eq!(types.user_defined_types.len(), 2);
+        }
+
+        #[test]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+        fn should_init_types_when_revision_v1() {
+            // When
+            let types = serde_json::from_str::<Types>(VALID_V1_DATA).unwrap();
+
+            // Then
+            assert_eq!(types.revision, Revision::V1);
+            assert_eq!(types.user_defined_types.len(), 2);
+        }
+    }
+
+    #[cfg(test)]
+    mod serialize {
+        use super::*;
+
+        #[test]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+        fn should_return_serialized_types_when_revision_v0() {
+            // Given
+            let types = serde_json::from_str::<Types>(VALID_V0_DATA).unwrap();
+
+            // When
+            let result = serde_json::to_string(&types).unwrap();
+
+            // Then
+            let raw_json: Value = serde_json::from_str(VALID_V0_DATA).unwrap();
+            let result_json: Value = serde_json::from_str(&result).unwrap();
+            assert_eq!(result_json, raw_json);
+        }
+
+        #[test]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+        fn should_return_serialized_types_when_revision_v1() {
+            // Given
+            let types = serde_json::from_str::<Types>(VALID_V1_DATA).unwrap();
+
+            // When
+            let result = serde_json::to_string(&types).unwrap();
+
+            // Then
+            let raw_json: Value = serde_json::from_str(VALID_V1_DATA).unwrap();
+            let result_json: Value = serde_json::from_str(&result).unwrap();
+            assert_eq!(result_json, raw_json);
+        }
     }
 
     #[test]
