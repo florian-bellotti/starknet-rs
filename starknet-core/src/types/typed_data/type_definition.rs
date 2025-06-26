@@ -363,21 +363,21 @@ impl CompositeType for PresetType {
 
     fn field_iter(&self) -> Self::FieldIterator<'_> {
         match self {
-            Self::U256 => [
+            _ => [
                 ("low", &FullTypeReference::U128),
                 ("high", &FullTypeReference::U128),
             ]
             .into_iter(),
-            Self::TokenAmount => [
-                ("token_address", &FullTypeReference::ContractAddress),
-                ("amount", &FullTypeReference::U256),
-            ]
-            .into_iter(),
-            Self::NftId => [
-                ("collection_address", &FullTypeReference::ContractAddress),
-                ("token_id", &FullTypeReference::U256),
-            ]
-            .into_iter(),
+            // Self::TokenAmount => [
+            //     ("token_address", &FullTypeReference::ContractAddress),
+            //     ("amount", &FullTypeReference::U256),
+            // ]
+            // .into_iter(),
+            // Self::NftId => [
+            //     ("collection_address", &FullTypeReference::ContractAddress),
+            //     ("token_id", &FullTypeReference::U256),
+            // ]
+            // .into_iter(),
         }
     }
 
